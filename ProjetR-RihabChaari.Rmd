@@ -1,0 +1,435 @@
+---
+title: "\\textcolor{blue}{ProjetR WaterStress}"
+author: "\\textcolor{red}{Yosra Hammoudi et Rihab Chaari M1DSSD}"
+date: "\\textcolor{blue}{`r Sys.Date()`}"
+output: pdf_document
+header-includes:
+  - "\\usepackage{xcolor}"
+
+---
+
+\textcolor{black}{\emph{Au cours de ce projet nous allons analyser la variation du stress hydrique (La
+variable \textcolor{red}{stress hydrique} fait référence à une condition dans laquelle une plante subit un manque d'eau suffisant pour affecter son métabolisme et son développement. En d'autres termes, le stress hydrique se
+produit lorsque la quantité d'eau disponible pour une plante est insuffisante pour répondre à ses besoins
+physiologiques normaux.)}}
+
+\vspace{1em}
+
+\textcolor{black}{\emph{Nous avons tiré la base de données depuis \textcolor{red}{AQUASTAT} qui est un Système
+d'information mondial de la FAO sur l'eau et l'agriculture.}}
+
+\textcolor{blue}{1- IMPORTATION DES DONNEES}
+
+```{r}
+
+# Charger le package readxl pour la lecture des fichiers Excel
+library(readxl)
+
+# Spécifier le chemin du fichier Excel de notre base de données
+chemin_excel <- "C:/Users/rihab/Desktop/ProjetR/base/AQUASTAT-Dissemination-System.xlsx"
+
+# Lire le fichier Excel et stocker les données dans un objet appelé donnees_excel
+donnees_excel <- read_excel(chemin_excel)
+
+# Afficher les premières lignes des données pour examiner la structure initiale
+head(donnees_excel)
+
+
+```
+
+
+\textcolor{blue}{2- PREPROCESSING}
+
+```{r}
+#Effectuer un filtrage des données en ciblant spécifiquement les lignes associées 
+#au "Water Stress". La colonne "Variable" de notre base de données contient 
+#des informations diverses, et nous utilisons la fonction subset pour extraire 
+#uniquement les lignes où la variable est définie comme "SDG 6.4.2. Water Stress".
+
+
+# Filtrer les lignes avec "Water Stress" dans la colonne "Variable"
+donnees_water_stress <- subset(donnees_excel, Variable == "SDG 6.4.2. Water Stress")
+
+# Afficher les données filtrées
+View(donnees_water_stress)
+print(donnees_water_stress)
+
+```
+
+
+```{r}
+# vérification  de valeurs manquantes (NA) dans les colonnes "2000" et "2020" 
+# de notre ensemble de données filtrées sur "Water Stress".
+#La fonction is.na() est utilisée pour identifier les valeurs NA, 
+#et la fonction any() est utilisée pour déterminer si au moins une valeur manquante 
+#est présente dans la colonne.
+
+# Vérifier s'il y a des valeurs NA dans la colonne "2000"
+presence_na_2000 <- any(is.na(donnees_water_stress$`2000`))
+
+# Afficher le résultat "boolean"
+print(presence_na_2000)
+# Vérifier s'il y a des valeurs NA dans la colonne "2000"
+presence_na_2020 <- any(is.na(donnees_water_stress$`2020`))
+
+# Afficher le résultat "boolean"
+print(presence_na_2020)
+
+```
+
+```{r}
+#Effectuer le comptage du nombre de valeurs manquantes (NA) dans les colonnes 
+#"2000" et "2020" de notre ensemble de données filtrées sur "Water Stress".
+# Compter le nombre de valeurs NA dans la colonne "2000"
+nb_na_2000 <- sum(is.na(donnees_water_stress$`2000`))
+
+# Afficher le nombre de valeurs NA
+print(nb_na_2000)
+# Compter le nombre de valeurs NA dans la colonne "2000"
+nb_na_2020 <- sum(is.na(donnees_water_stress$`2020`))
+
+# Afficher le nombre de valeurs NA
+print(nb_na_2020)
+
+```
+
+```{r}
+# filtre les lignes de la base de données  et conserve uniquement celles 
+#qui contiennent au moins une valeur manquante (NA) dans l'une de leurs colonnes.
+data_null_values <- subset(donnees_water_stress, apply(donnees_water_stress, 1,
+                                                       function(row) any(is.na(row))))
+# Affichez le résultat
+print(data_null_values)
+```
+
+
+```{r}
+
+# Identifier les doublons basés sur la colonne "country"
+doublons_country <- data_null_values[duplicated(data_null_values$Country) 
+                                     | duplicated(data_null_values$Country, fromLast = TRUE), ]
+
+# Afficher les doublons
+View(doublons_country)
+print(doublons_country)
+```
+
+```{r}
+# Utiliser le package dplyr pour combiner les doublons basés sur la colonne "Country".
+
+library(dplyr)
+
+donnees_combine <- doublons_country %>%
+  group_by(Country) %>%
+  summarise(across(c("2000", "2020"), ~na.omit(.)[1]))
+
+# Afficher les données combinées
+View(donnees_combine)
+print(donnees_combine)
+```
+
+```{r}
+
+# Utiliser le package dplyr pour combiner les données filtrées sur "Water Stress"
+#en se basant sur la colonne "Country".
+library(dplyr)
+
+donnees_combine_waterStress <- donnees_water_stress %>%
+  group_by(Country) %>%
+  summarise(across(c("2000", "2020"), ~na.omit(.)[1]))
+
+# Afficher les données combinées
+View(donnees_combine_waterStress)
+print(donnees_combine_waterStress)
+```
+
+```{r}
+#Compter le nombre de valeurs manquantes (NA) dans les colonnes "2000" et "2020"
+#après la combinaison des données filtrées sur "water Stress".
+
+missing_values_2000 <- sum(is.na(donnees_combine_waterStress$`2000`) )
+print(missing_values_2000)
+missing_values_2020 <- sum(is.na(donnees_combine_waterStress$`2020`) )
+print(missing_values_2020)
+```
+
+```{r}
+#Utiliser la fonction na.omit() pour supprimer les lignes qui contiennent des valeurs 
+#manquantes dans les données combinées sur "water Stress". 
+donnees_combine_waterStress_propre<- na.omit(donnees_combine_waterStress)
+print(donnees_combine_waterStress_propre)
+View(donnees_combine_waterStress_propre)
+```
+
+```{r}
+#Compter nombre de valeurs manquantes (NA) pour vérifier qu'aucune valeur NaN ne subsiste dans notre base.
+missing_values_2000 <- sum(is.na(donnees_combine_waterStress_propre$`2000`) )
+print(missing_values_2000)
+missing_values_2020 <- sum(is.na(donnees_combine_waterStress_propre$`2020`) )
+print(missing_values_2020)
+```
+
+```{r}
+# Charger le package
+library(dplyr)
+
+# Ajouter la colonne "Variable" avec la valeur "SDG 6.4.2. Water Stress"
+data_null_values_proper <- donnees_combine_waterStress_propre %>%
+  mutate(Variable = "SDG 6.4.2. Water Stress")
+
+# Afficher les données avec la nouvelle colonne
+View(data_null_values_proper)
+print(data_null_values_proper)
+
+```
+
+\textcolor{blue}{3- MANIPILATION DES DONNEES}
+
+
+\textcolor{purple}{a- Creation d'une carte pour montrer la valeurs de stress hydrique dans chaque pays en 2000}
+
+```{r}
+library(sf)
+library(ggplot2)
+library(tidyr)
+library(rnaturalearth)
+
+# charger la carte du monde 
+world_map <- ne_countries(scale = "medium", returnclass = "sf")
+
+# Sélectionner les colonnes nécessaires pour la carte
+selected_cols <- c("Country", "2000")
+data_for_map <- data_null_values_proper[selected_cols]
+
+# Convertir les valeurs "2000" en numérique
+data_for_map$`2000` <- as.numeric(data_for_map$`2000`)
+
+# Fusionner les données avec la carte mondiale
+merged_data <- merge(world_map, data_for_map, by.x = "name", by.y = "Country", all.x = TRUE)
+
+# Créer la carte avec ggplot2 et une échelle de couleur continue
+ggplot() +
+  geom_sf(data = merged_data, aes(fill = `2000`), color = "white", lwd = 0.2) +
+  scale_fill_gradientn(colors = c("red", "green", "yellow", "blue"), 
+                       breaks = c(0, 20, 50, 100), 
+                       labels = c("0-20", "20-50", "50-100", "100+"),
+                       limits = c(0, 150), 
+                       name = "Stress hydrique") +
+  theme_minimal() +
+  labs(title = "Carte du stress hydrique en 2000")
+```
+
+
+\textcolor{purple}{b- Creation d'une carte pour montrer la valeurs de stress hydrique dans chaque pays en 2020}
+
+```{r}
+
+library(sf)
+library(ggplot2)
+library(tidyr)
+library(rnaturalearth)
+
+#charger la carte mondiale
+world_map <- ne_countries(scale = "medium", returnclass = "sf")
+
+# Sélectionner les colonnes nécessaires pour la carte
+selected_cols <- c("Country", "2020")
+data_for_map <- data_null_values_proper[selected_cols]
+
+# Convertir les valeurs "2020" en numérique
+data_for_map$`2020` <- as.numeric(data_for_map$`2020`)
+
+# Fusionner les données avec la carte mondiale
+merged_data <- merge(world_map, data_for_map, by.x = "name", by.y = "Country", all.x = TRUE)
+
+# Créer la carte avec ggplot2 et une échelle de couleur continue
+ggplot() +
+  geom_sf(data = merged_data, aes(fill = `2020`), color = "white", lwd = 0.2) +
+  scale_fill_gradientn(colors = c("red", "green", "yellow", "blue"), 
+                       breaks = c(0, 20, 50, 100), 
+                       labels = c("0-20", "20-50", "50-100", "100+"),
+                       limits = c(0, 150),  # Ajuster les limites en fonction de vos données
+                       name = "Stress hydrique") +
+  theme_minimal() +
+  labs(title = "Carte du stress hydrique en 2020")
+
+```
+
+\textcolor{purple}{c- Creer une carte pour montrer la difference entre 2000 et 2020}
+
+```{r}
+
+library(sf)
+library(ggplot2)
+library(tidyr)
+library(rnaturalearth)
+
+# Charger les données de la carte mondiale
+world_map <- ne_countries(scale = "medium", returnclass = "sf")
+
+# Sélectionner les colonnes nécessaires pour la carte
+selected_cols <- c("Country", "2000", "2020")
+data_for_map <- data_null_values_proper [selected_cols]
+
+# Convertir les valeurs "2000" et "2020" en numérique
+data_for_map$`2000` <- as.numeric(data_for_map$`2000`)
+data_for_map$`2020` <- as.numeric(data_for_map$`2020`)
+
+# Ajouter une colonne représentant la différence entre les deux années
+data_for_map$Difference <- data_for_map$`2020` - data_for_map$`2000`
+
+# Fusionner les données avec la carte mondiale
+merged_data_diff <- merge(world_map, data_for_map, by.x = "name", by.y = "Country", all.x = TRUE)
+
+# Créer la carte de différence avec ggplot2
+ggplot() +
+  geom_sf(data = merged_data_diff, aes(fill = Difference), color = "white", lwd = 0.2) +
+  scale_fill_gradientn(colors = c("red", "blue", "green", "yellow", "purple"),
+                       breaks = c(-15, -7.5, 0, 7.5, 15),  # Ajustez les valeurs 
+                                                         #en fonction de vos données
+                       limits = c(-15, 15),  # Ajustez la plage de valeurs
+                       name = "Différence") +
+  theme_minimal() +
+  labs(title = "Différence de stress hydrique entre 2000 et 2020")
+
+
+```
+
+\textcolor{purple}{d- Creer un tableau contenant les pays selon la catégorie de différence}
+
+```{r}
+# Charger la bibliothèque knitr
+library(knitr)
+
+# Calculer la différence de stress hydrique
+data_null_values_proper$Difference<-   
+                               as.numeric(data_null_values_proper$`2020`)-
+                               as.numeric(data_null_values_proper$`2000`)
+
+# Créer des intervalles
+breaks <- c(-Inf, -15, -7.5, 0, 7.5, 15, Inf)
+labels <- c("<-15", "-15 à -7.5", "-7.5 à 0", "0 à 7.5", "7.5 à 15", ">15")
+
+# Catégoriser les différences
+data_null_values_proper$Category <- cut(data_null_values_proper$Difference, 
+                                        breaks = breaks, labels = labels, include.lowest = TRUE)
+
+# Préparer une liste pour chaque catégorie
+categories_list <- setNames(vector("list", length(labels)), labels)
+
+# Remplir la liste avec les noms des pays
+for (label in labels) {
+    categories_list[[label]] <- data_null_values_proper$Country[
+                                           data_null_values_proper$Category == label]
+}
+
+# Trouver le nombre maximum de pays dans une catégorie
+max_length <- max(sapply(categories_list, length))
+
+# Standardiser la longueur de chaque vecteur dans la liste
+categories_list <- lapply(categories_list, function(x) c(x, rep(NA, max_length - length(x))))
+
+# Convertir la liste en data frame sans modifier les noms de colonne
+categories_table <- setNames(data.frame(categories_list, check.names = FALSE), labels)
+
+# Afficher le tableau
+kable(categories_table, "markdown")
+```
+
+\textcolor{purple}{e- Visualiser les nombres de pays par catégories de différence avec un histogramme}
+
+```{r}
+
+# Assurez-vous que ggplot2 est chargé
+library(ggplot2)
+
+# Calculer le nombre de pays par catégorie
+country_counts <- table(data_null_values_proper$Category)
+
+# Transformer en data frame
+country_counts_df <- as.data.frame(country_counts)
+names(country_counts_df) <- c("Category", "Number_of_Countries")
+
+# Créer l'histogramme avec des couleurs
+ggplot(country_counts_df, aes(x = Category, y = Number_of_Countries, fill = Category)) +
+  geom_bar(stat = "identity") +  # Utiliser geom_bar pour un histogramme
+  scale_fill_brewer(palette = "Set1") +  # Utiliser une palette de couleurs prédéfinie
+  theme_minimal() +
+  labs(title = "Nombre de Pays par Catégorie de Différence de Stress Hydrique",
+       x = "Catégorie de Différence",
+       y = "Nombre de Pays") +
+  theme(legend.title = element_blank())  # Supprimer le titre de la légende
+
+```
+
+\textcolor{purple}{f- Cocher la nature d'evolution de stress hydrique par pays}
+
+```{r}
+# Sélectionner les colonnes nécessaires
+selected_cols <- c("Country", "2000", "2020")
+
+# Créer une nouvelle colonne indiquant si la valeur a augmenté
+data_null_values_proper$augmentation <- ifelse(data_null_values_proper$`2020`
+                                               > data_null_values_proper$`2000`, "X", "")
+
+# Créer une nouvelle colonne indiquant si la valeur a diminué
+data_null_values_proper$diminution <- ifelse(data_null_values_proper$`2020`
+                                             < data_null_values_proper$`2000`, "X", "")
+
+# Créer une nouvelle colonne indiquant si la valeur est stable
+data_null_values_proper$stable <- ifelse(data_null_values_proper$`2020`
+                                         == data_null_values_proper$`2000`, "X", "")
+
+# Sélectionner les colonnes nécessaires pour le tableau final
+result_table <- data_null_values_proper[, c("Country", "augmentation", "diminution", "stable")]
+
+# Afficher le tableau final
+print(result_table)
+View(result_table)
+
+
+
+```
+
+\textcolor{purple}{g- Faire un Histogramme qui visualise l'évolution du stress hydrique entre 2000 et 2020}
+
+```{r}
+library(ggplot2)
+
+# Ajouter une colonne pour la classification
+data_null_values_proper$Evolution <- with(data_null_values_proper,
+                                          ifelse(Difference > 0, "Augmentation",
+                                      ifelse(Difference < 0, "Diminution", "Stable")))
+
+# Compter le nombre de pays dans chaque catégorie
+evolution_count <- table(data_null_values_proper$Evolution)
+
+# Transformer en data frame pour ggplot
+evolution_df <- as.data.frame(evolution_count)
+names(evolution_df) <- c("Category", "Count")
+
+# Créer l'histogramme
+ggplot(evolution_df, aes(x = Category, y = Count, fill = Category)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Nombre de pays par évolution du stress hydrique (2000 à 2020)",
+       x = "Catégorie d'Évolution", y = "Nombre de Pays") +
+  scale_fill_brewer(palette = "Set1") + # Ajouter des couleurs
+  theme_minimal()
+
+
+
+```
+
+\textcolor{blue}{4- CONCLUSION}
+
+\textcolor{black}{\emph{Notre analyse approfondie des tendances du stress hydrique dans un échantillon
+de 157 pays au cours des deux dernières décennies révèle une réalité alarmante : dans plus de 87 de ces pays,
+soit environ 55% de notre échantillon, le stress hydrique a augmenté de manière significative. Cette tendance croissante souligne la gravité de la situation mondiale en matière de gestion et de disponibilité 
+des ressources en eau.}}
+
+\vspace{1em}
+\textcolor{black}{\emph{Ce que ces chiffres indiquent clairement, c'est que nous sommes à un point critique. 
+La croissance démographique, les pratiques industrielles et agricoles non durables, ainsi que l'impact accru du changement climatique contribuent tous à cette augmentation rapide du stress hydrique. Nos analyses suggèrent que cette tendance à la hausse ne va pas seulement se poursuivre, mais va probablement s'accélérer dans les années à venir. Cela implique que, sans interventions significatives et des changements radicaux dans notre manière de gérer les ressources en eau, nous pourrions nous diriger vers une crise mondiale de l'eau.}}
+
+\vspace{1em}
+\textcolor{black}{\emph{`En somme, les données parlent d'elles-mêmes : nous sommes à un tournant décisif dans notre gestion des ressources en eau. Si nous ne prenons pas des mesures immédiates et efficaces, nous risquons de faire face à des pénuries d'eau généralisées, avec des conséquences désastreuses sur tous les aspects de la vie humaine et environnementale. Il est impératif d'agir maintenant pour inverser ces tendances inquiétantes et garantir un avenir où l'eau, cette ressource vitale, est disponible et accessible pour tous.}}
